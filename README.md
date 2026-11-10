@@ -23,7 +23,7 @@ Pin anything you want to your wall: a photo, a price, a link, and a note. Wishbo
 - Gifts for other people: add a person, then pin gift ideas under their name. One gift can be for more than one person.
 - Gifts follow their own steps: to buy, bought, then given. Gift totals are kept apart from your own wishlist total.
 - Groups, a 3-star priority, notes, search, and sorting by priority, newest, or price.
-- Sync your phone and computer on the same Wi-Fi. Your list goes straight from one device to the other, with no account and no server in between.
+- Sync your phone and computer on the same Wi-Fi or router with a 6-character code. Your list goes straight from one device to the other, with no account. The device with the code has to tap Allow first.
 - Backup file: export your wishes and import them again, or merge them into another device.
 - Light mode by default, with a dark mode switch.
 - Works offline, and installs to your home screen or desktop like an app.
@@ -35,19 +35,20 @@ Pin anything you want to your wall: a photo, a price, a link, and a note. Wishbo
 3. Paste a link or photo into the bar at the bottom, or press the plus button, to pin your first wish.
 4. For gifts, open **People**, add a name, and open their page. Anything you add there is a gift for them.
 5. To sync two devices, open **Sync and backup** on both:
-   1. On the first device, choose **Start pairing** and copy the code.
-   2. On the second device, choose **Join from the other device**, paste the code, and copy the reply code it gives you.
-   3. Paste the reply code on the first device and press **Connect and sync**.
-6. If sync can't connect (for example on guest Wi-Fi), use **Export** on one device and **Import** on the other.
+   1. On the first device, choose **Show a code on this device**. It shows 6 characters.
+   2. On the second device, choose **Enter a code from the other device** and type them in.
+   3. On the first device, tap **Allow**. Your wishes then sync both ways.
+6. If the short code can't connect, choose **Can't connect? Use a long code instead** on either device. It works the same way but needs two longer codes copied between your devices.
+7. If sync can't connect at all (for example on guest Wi-Fi), use **Export** on one device and **Import** on the other.
 
 ## Requirements
 
 - A current version of Chrome, Edge, or Safari.
-- For sync: both devices on the same Wi-Fi network, and a network that lets devices talk to each other (guest networks often don't).
+- For sync: both devices on the same Wi-Fi or router (a computer on a network cable counts), a network that lets devices talk to each other (guest networks often don't), and internet for the first moment of pairing.
 
 ## Built with
 
-Plain HTML, CSS, and JavaScript, with no framework. Wishes are stored in the browser, sync uses a direct browser-to-browser connection, and a service worker makes it work offline. See [docs/DEVELOPING.md](docs/DEVELOPING.md) for how to run and host it.
+Plain HTML, CSS, and JavaScript, with no framework. Wishes are stored in the browser, sync uses a direct browser-to-browser connection introduced by the free public PeerJS service, and a service worker makes it work offline. See [docs/DEVELOPING.md](docs/DEVELOPING.md) for how to run and host it.
 
 ## Status
 

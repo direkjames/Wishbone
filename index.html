@@ -133,7 +133,30 @@
   <p class="note">Sync works on the same Wi-Fi only. Your list goes straight from one device to the other and never touches a server.</p>
 
   <div data-step="home">
+    <div class="acts"><button class="btn dark" id="c-show">Show a code on this device</button><button class="btn" id="c-enter">Enter a code from the other device</button></div>
+    <p class="note">Open Wishbone on both devices. One shows a 6-character code and the other types it in. A free introduction service passes the connection details for a few seconds, then your devices talk directly. It never sees your list.</p>
+    <button class="linkbtn" id="c-long">Can’t connect? Use a long code instead</button>
+  </div>
+
+  <div data-step="show" hidden>
+    <p class="note">On your other device, open <b>Sync and backup</b>, tap <b>Enter a code from the other device</b>, and type:</p>
+    <div id="codebox" class="codebox" aria-live="polite" aria-label="Your sync code"></div>
+    <p class="note">The code works once and expires in 5 minutes.</p>
+    <div id="ask" class="ask" hidden>
+      <b>A device wants to connect.</b> Allow it only if you just started this on your other device.
+      <div class="acts"><button class="btn dark" id="ask-yes">Allow</button><button class="btn" id="ask-no">Deny</button></div>
+    </div>
+  </div>
+
+  <div data-step="enter" hidden>
+    <label class="f">Code from the other device<input id="c-input" class="codein" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="K7M2QX"></label>
+    <div class="acts"><button class="btn dark" id="c-go">Connect and sync</button></div>
+  </div>
+
+  <div data-step="manual" hidden>
+    <p class="note">Use this only if the 6-character code can’t connect. It needs two long codes copied between your devices.</p>
     <div class="acts"><button class="btn dark" id="s-start">Start pairing on this device</button><button class="btn" id="s-join">Join from the other device</button></div>
+    <button class="linkbtn" id="c-short">Back to the 6-character code</button>
   </div>
 
   <div data-step="host" hidden>

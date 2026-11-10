@@ -1,5 +1,5 @@
 import { getAll, put, newWish, mergeAll, clean, getPeople, putPerson, mergePeople, addPerson } from './db.js';
-import { createSession } from './sync.js';
+import { createSession, createShortSession, normCode } from './sync.js';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -391,7 +391,7 @@ const status = (msg, bad) => { const p = $('#s-status'); p.textContent = msg; p.
 
 $$('[data-open-sync]').forEach(b => b.addEventListener('click', () => {
   sess?.close(); sess = null; status('');
-  step('home'); $('#jout').hidden = true;
+  step('home'); $('#jout').hidden = true; $('#ask').hidden = true; $('#c-input').value = '';
   for (const id of ['#hcode', '#hreply', '#jcode', '#jreply']) $(id).value = '';
   showSheet($('#sync'));
 }));
@@ -402,7 +402,20 @@ function newSession() {
   return sess;
 }
 
-const FAIL = 'Couldn’t connect. Check that both devices are on the same Wi-Fi (not a guest network), then try again. You can also use a backup file.';
+function newShort() {
+  sess?.close(); sent = false; got = null;
+  sess = createShortSession({
+    onState: onSyncState, onData: onSyncData,
+    onAsk: (allow, deny) => {
+      $('#ask').hidden = false; status('');
+      $('#ask-yes').onclick = () => { $('#ask').hidden = true; status('Connecting…'); allow(); };
+      $('#ask-no').onclick = () => { $('#ask').hidden = true; deny(); };
+    },
+  });
+  return sess;
+}
+
+const FAIL = 'Couldn’t connect. Check that both devices are on the same Wi-Fi or router (not a guest network), then try again. You can also use a long code or a backup file.';
 
 async function onSyncState(s) {
   if (s === 'open') {
@@ -410,6 +423,10 @@ async function onSyncState(s) {
     await sess.send({ t: 'all', items: await getAll(), people: await getPeople() });
     sent = true; finishSync();
   } else if (s === 'failed') status(FAIL, true);
+  else if (s === 'waiting') status('Waiting for the other device to tap Allow…');
+  else if (s === 'badcode') status('That code isn’t active. Check the 6 characters, or show a new code on the other device.', true);
+  else if (s === 'denied') { status('You denied the connection.', true); step('home'); }
+  else if (s === 'expired') { status('That code expired. Show a new one to try again.', true); step('home'); }
   else if (s === 'closed' && !(sent && got)) status('The connection closed before syncing finished.', true);
 }
 
@@ -427,6 +444,30 @@ async function finishSync() {
   await refresh();
   setTimeout(() => sess?.close(), 1500);
 }
+
+$('#c-show').addEventListener('click', async () => {
+  step('show'); status('');
+  const box = $('#codebox'); box.textContent = 'Making your code…';
+  try {
+    const code = await newShort().host();
+    box.replaceChildren(...[...code].map(c => h('span', {}, c)));
+    box.setAttribute('aria-label', 'Your sync code is ' + [...code].join(' '));
+  } catch {
+    box.textContent = ''; step('home');
+    status('Couldn’t reach the introduction service. Check your internet, or use a long code instead.', true);
+  }
+});
+$('#c-enter').addEventListener('click', () => { step('enter'); status(''); $('#c-input').focus(); });
+$('#c-input').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#c-go').click(); } });
+$('#c-go').addEventListener('click', async () => {
+  const code = normCode($('#c-input').value);
+  if (code.length !== 6) return status('Enter all 6 characters of the code.', true);
+  status('Connecting…');
+  try { await newShort().join(code); }
+  catch { status('Couldn’t reach the introduction service. Check your internet, or use a long code instead.', true); }
+});
+$('#c-long').addEventListener('click', () => { step('manual'); status(''); });
+$('#c-short').addEventListener('click', () => { step('home'); status(''); });
 
 $('#s-start').addEventListener('click', async () => {
   step('host'); $('#hcode').value = 'Making your code…';

@@ -72,6 +72,11 @@ select.pill{appearance:none;padding-right:14px}
 .pc-name{font-size:18px;overflow-wrap:anywhere}.pc-meta{font-size:12px;color:var(--muted)}
 .phead{display:flex;align-items:center;gap:8px;margin-bottom:14px}
 .phead-t{flex:1;min-width:0}.phead-t .fr{font-size:22px;line-height:1.1;overflow-wrap:anywhere}
+.linkbtn{background:none;border:0;padding:6px 0;margin-top:8px;color:var(--muted);text-decoration:underline;font-size:13px}
+.codebox{display:flex;gap:6px;justify-content:center;margin:12px 0;min-height:56px;align-items:center}
+.codebox span{width:42px;height:54px;display:flex;align-items:center;justify-content:center;background:var(--card);border:1.5px solid var(--ink);box-shadow:2px 2px 0 var(--sh);border-radius:10px;font:700 26px 'Fraunces',Georgia,serif}
+.codein{text-align:center;font:700 28px 'Fraunces',Georgia,serif!important;letter-spacing:.3em;text-transform:uppercase}
+.ask{background:var(--t3);border:1.5px solid var(--ink);border-radius:12px;padding:10px 12px;font-size:14px;margin-top:10px}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 6px}
 .chip{border:1.5px solid var(--ink);border-radius:99px;background:var(--card);padding:4px 12px;font-size:13px;font-weight:700}
 .chip.on{background:var(--ink);color:var(--on-ink)}

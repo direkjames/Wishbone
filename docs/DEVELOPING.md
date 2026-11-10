@@ -37,12 +37,21 @@ Push the repo, then Settings, Pages, deploy from the `main` branch root. Everyth
 
 ## How sync works
 
-There is no server. Two devices open a WebRTC data channel and find each other by swapping two copy-and-paste codes (an offer and an answer). No STUN or TURN servers are configured on purpose, so it only works on the same local network. Once connected, each side sends all its wishes, and each wish is kept by the newest `updatedAt`. Deleted wishes stay as small tombstones so deletes sync too. Everything received is rebuilt field by field in `clean()` before it is stored.
+Your data never goes through a server. Two devices open a WebRTC data channel and send each other everything over the local network. No STUN or TURN servers are configured on purpose, so it only works on the same local network.
+
+Introducing the devices works two ways (`js/sync.js`):
+
+1. **6-character code (default).** The device that shows the code registers the id `wishbone-<CODE>` with the free public PeerJS broker (PeerJS 1.5.4, loaded from jsDelivr with a Subresource Integrity hash, only when you open sync). The other device types the code and connects to that id. The broker only relays the connection setup. The code owner must tap **Allow**; the joining device sends nothing until it receives the owner's `wishbone-ok` message, and the owner ignores any data before Allow. A code works for one connection and expires after 5 minutes. The alphabet leaves out 0, O, 1, I and L.
+2. **Long codes (fallback).** No server at all: the devices swap an offer and an answer by copy and paste.
+
+Once connected, each side sends all its wishes, and each wish is kept by the newest `updatedAt`. Deleted wishes stay as small tombstones so deletes sync too. Everything received is rebuilt field by field in `clean()` before it is stored.
 
 People are their own records. A person's id comes from their name (`p-mom`), so adding the same name on two devices gives one person after sync. A wish's `for` list holds person ids; an empty list means it's for me, and only those wishes count toward "Still wishing for". People are merged before wishes.
 
 ## Known limits
 
-- Every sync needs the two-code pairing again; devices don't stay paired.
+- Every sync needs a new code; devices don't stay paired.
+- The 6-character code depends on the free public PeerJS broker being up. If it's down, use the long code or a backup file.
+- PeerJS 1.5.4 has no raw-string mode, so frames are sent with its `json` serialization.
 - Browsers that hide local IPs behind mDNS names usually still connect on a home network, but some routers block it.
 - Photos are shrunk to 800 px JPEG and stored inside each wish; a very large list means a large backup file.
