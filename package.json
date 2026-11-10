@@ -1,0 +1,9 @@
+{
+  "name": "wishbone",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node dev-server.mjs 8080",
+    "test": "node tests/merge.test.mjs"
+  }
+}

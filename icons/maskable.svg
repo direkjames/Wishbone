@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs>
+<g id="bo"><path d="M170 150C170 250 215 285 256 330C297 285 342 250 342 150M256 330V396" fill="none" stroke-width="70" stroke-linecap="round" stroke-linejoin="round"/><circle cx="170" cy="136" r="46" stroke="none"/><circle cx="342" cy="136" r="46" stroke="none"/><circle cx="256" cy="404" r="46" stroke="none"/></g>
+<g id="bi"><path d="M170 150C170 250 215 285 256 330C297 285 342 250 342 150M256 330V396" fill="none" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/><circle cx="170" cy="136" r="31" stroke="none"/><circle cx="342" cy="136" r="31" stroke="none"/><circle cx="256" cy="404" r="31" stroke="none"/></g>
+</defs>
+<rect width="512" height="512" fill="#E2A93B"/>
+<g transform="translate(256 256) scale(.78) translate(-256 -256)">
+<g transform="translate(18 22)" fill="#B98725" stroke="#B98725"><use href="#bo"/></g>
+<g fill="#2B2B33" stroke="#2B2B33"><use href="#bo"/></g>
+<g fill="#FAF8F4" stroke="#FAF8F4"><use href="#bi"/></g>
+<path d="M92 70Q99 108 138 116Q99 124 92 162Q85 124 46 116Q85 108 92 70Z" fill="#FAF8F4" stroke="#2B2B33" stroke-width="8" stroke-linejoin="round"/>
+</g>
+</svg>
