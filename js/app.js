@@ -1,4 +1,4 @@
-import { getAll, put, newWish, mergeAll, clean } from './db.js';
+import { getAll, put, newWish, mergeAll, clean, getPeople, putPerson, mergePeople, addPerson } from './db.js';
 import { createSession } from './sync.js';
 
 const $ = s => document.querySelector(s);
@@ -23,7 +23,11 @@ const money = n => '₱' + Number(n || 0).toLocaleString('en-PH', Number.isInteg
 const host = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; } };
 const hash = s => [...s].reduce((a, c) => a + c.charCodeAt(0), 0);
 
-const st = { items: [], view: 'wall', group: '', q: '', sort: 'priority', cur: null };
+const st = { items: [], people: [], view: 'wall', person: '', group: '', q: '', sort: 'priority', cur: null };
+const own = w => w.for.length === 0; // a wish with nobody in "Gift for" is for me
+const personOf = id => st.people.find(p => p.id === id);
+const sum = a => a.reduce((s, w) => s + w.price, 0);
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 /* ---------- toast ---------- */
 let toastT;
@@ -47,7 +51,9 @@ $$('[data-theme-toggle]').forEach(b => b.addEventListener('click', () => {
 
 /* ---------- data and rendering ---------- */
 async function refresh() {
-  st.items = (await getAll()).filter(w => !w.deleted);
+  st.items = (await getAll()).filter(w => !w.deleted).map(w => ({ for: [], given: false, ...w }));
+  st.people = (await getPeople()).filter(p => !p.deleted).sort((a, b) => a.name.localeCompare(b.name));
+  if (st.person && !personOf(st.person)) st.person = '';
   render();
 }
 
@@ -62,14 +68,18 @@ function lastText() {
 }
 
 function render() {
-  const open = st.items.filter(w => !w.granted);
-  const done = st.items.filter(w => w.granted);
-  const sum = a => a.reduce((s, w) => s + w.price, 0);
+  // My own wishes and gifts for other people are counted separately.
+  const mine = st.items.filter(own), gifts = st.items.filter(w => !own(w));
+  const open = mine.filter(w => !w.granted), done = mine.filter(w => w.granted);
+  const toBuy = gifts.filter(w => !w.granted), bought = gifts.filter(w => w.granted);
 
   $$('[data-total]').forEach(e => { e.textContent = money(sum(open)); });
   $$('[data-count]').forEach(e => { e.textContent = open.length; });
-  $$('[data-sub]').forEach(e => { e.textContent = `${open.length} wishes · ${money(sum(done))} granted`; });
-  $$('[data-granted-line]').forEach(e => { e.textContent = `${money(sum(done))} already granted`; });
+  $$('[data-sub]').forEach(e => { e.textContent = `${plural(open.length, 'wish', 'wishes')} · ${money(sum(done))} granted`; });
+  $$('[data-gifts]').forEach(e => { e.textContent = `Gifts to buy ${money(sum(toBuy))}`; });
+  $$('[data-granted-line]').forEach(e => {
+    e.textContent = `${money(sum(done))} already granted` + (bought.length ? ` · ${money(sum(bought))} in gifts bought` : '');
+  });
   $$('[data-last]').forEach(e => { e.textContent = lastText(); });
   $$('[data-view]').forEach(b => {
     const on = b.dataset.view === st.view;
@@ -86,8 +96,19 @@ function render() {
     class: 'nv', 'aria-current': g === st.group, onclick: () => { st.group = st.group === g ? '' : g; render(); },
   }, h('i', { class: 'ti ti-tag' }), g)));
 
+  const inPeople = st.view === 'people', person = inPeople && personOf(st.person);
+  const grid = inPeople && !person;
+  $('#people').hidden = !grid;
+  $('#phead').hidden = !person;
+  $('#tools').hidden = grid;
+  $('#wall').hidden = grid;
+  $('#quick .plus').setAttribute('aria-label', person ? `Add a gift for ${person.name}` : 'Add wish');
+  $('#qin').placeholder = person ? `Paste a gift idea for ${person.name}` : 'Paste a link or photo';
+  if (grid) { renderPeople(gifts); $('#empty').hidden = true; return; }
+
   const q = st.q.toLowerCase();
-  let list = (st.view === 'granted' ? done : open)
+  const pool = person ? st.items.filter(w => w.for.includes(person.id)) : st.view === 'granted' ? st.items.filter(w => w.granted) : open;
+  let list = pool
     .filter(w => !st.group || w.group === st.group)
     .filter(w => !q || [w.name, w.notes, w.group].some(x => x.toLowerCase().includes(q)));
   const by = {
@@ -97,6 +118,13 @@ function render() {
     low: (a, b) => a.price - b.price,
   }[st.sort];
   list = list.sort(by);
+  if (person) list = list.sort((a, b) => a.granted - b.granted); // gifts still to buy first
+
+  if (person) {
+    const mineG = pool, left = mineG.filter(w => !w.granted);
+    $('#pname-h').textContent = person.name;
+    $('#pmeta').textContent = `${plural(mineG.length, 'gift', 'gifts')} · ${money(sum(left))} to buy · ${mineG.filter(w => w.given).length} given`;
+  }
 
   const wall = $('#wall');
   wall.className = 'wall' + (st.view === 'list' ? ' list' : '');
@@ -105,6 +133,21 @@ function render() {
   list.forEach((w, i) => cols[i % n].append(card(w, i)));
   wall.replaceChildren(...cols);
   $('#empty').hidden = list.length > 0;
+  $('#empty-t').textContent = person ? `No gifts for ${person.name} yet` : 'Nothing here yet';
+  $('#empty-p').textContent = person ? 'Paste a link or a photo below to add a gift idea.'
+    : 'Paste a link or a photo below, or press the plus button, to pin your first wish.';
+}
+
+function renderPeople(gifts) {
+  $('#pgrid').replaceChildren(...st.people.map(p => {
+    const g = gifts.filter(w => w.for.includes(p.id)), left = g.filter(w => !w.granted);
+    return h('button', { class: 'pcard', onclick: () => { st.person = p.id; render(); } },
+      h('span', { class: 'avatar fr', 'aria-hidden': 'true' }, ([...p.name][0] || '?').toUpperCase()),
+      h('span', { class: 'pc-name fr' }, p.name),
+      h('span', { class: 'pc-meta' }, `${plural(g.length, 'gift', 'gifts')} · ${money(sum(left))} to buy`),
+      h('span', { class: 'pc-meta' }, `${g.filter(w => w.granted && !w.given).length} bought · ${g.filter(w => w.given).length} given`));
+  }));
+  if (!st.people.length) $('#pgrid').append(h('p', { class: 'note' }, 'Add someone above, then pin gift ideas under their name.'));
 }
 
 // Real columns instead of CSS columns: the browser's column splitting repeats the tape on some cards.
@@ -121,7 +164,10 @@ function card(w, i) {
     w.link && h('a', { href: w.link, target: '_blank', rel: 'noopener noreferrer', onclick: e => e.stopPropagation() },
       h('i', { class: 'ti ti-link' }), ' ' + host(w.link)),
     w.group && h('span', {}, w.group),
-    h('span', { class: 'stars-s', 'aria-label': `${w.priority} of 3 stars` }, '★'.repeat(w.priority)));
+    h('span', { class: 'stars-s', 'aria-label': `${w.priority} of 3 stars` }, '★'.repeat(w.priority)),
+    !own(w) && h('span', { class: 'tag' }, h('i', { class: 'ti ti-gift' }), ' ' +
+      (st.person ? '' : 'For ' + w.for.map(id => personOf(id)?.name).filter(Boolean).join(', ')) +
+      (w.given ? (st.person ? 'Given' : ' · given') : w.granted ? (st.person ? 'Bought' : ' · bought') : (st.person ? 'To buy' : ''))));
   return h('article', {
     class: 'card' + (w.granted ? ' done' : ''), tabindex: '0', role: 'button', 'aria-label': `${w.name}, ${money(w.price)}`,
     style: `--r:${[-1.8, 1.4, 1.9, -1.2][i % 4]}deg`,
@@ -130,7 +176,42 @@ function card(w, i) {
   h('div', { class: 'body' }, h('div', { class: 'nm' }, w.name || 'Untitled'), meta));
 }
 
-$$('[data-view]').forEach(b => b.addEventListener('click', () => { st.view = b.dataset.view; render(); }));
+$$('[data-view]').forEach(b => b.addEventListener('click', () => { st.view = b.dataset.view; st.person = ''; render(); }));
+$('#pback').addEventListener('click', () => { st.person = ''; render(); });
+
+$('#padd').addEventListener('submit', async e => {
+  e.preventDefault();
+  const r = await addPerson($('#pname').value);
+  const err = $('#perr');
+  err.hidden = !r.error; err.textContent = r.error || '';
+  if (r.error) return;
+  $('#pname').value = '';
+  await refresh();
+  toast(`${r.person.name} added`);
+});
+
+$('#pedit').addEventListener('click', async () => {
+  const p = personOf(st.person);
+  const name = (prompt('Rename person', p.name) || '').trim().slice(0, 40);
+  if (!name || name === p.name) return;
+  if (st.people.some(x => x.id !== p.id && x.name.toLowerCase() === name.toLowerCase())) return toast(`${name} is already on your list`);
+  await putPerson({ ...p, name, updatedAt: Date.now() });
+  await refresh();
+});
+
+$('#pdel').addEventListener('click', async () => {
+  const p = personOf(st.person);
+  const gifts = st.items.filter(w => w.for.includes(p.id)), only = gifts.filter(w => w.for.length === 1);
+  const msg = `Delete ${p.name}?` + (only.length ? ` Their ${plural(only.length, 'gift', 'gifts')} will be deleted too.` : '') + ' This can’t be undone.';
+  if (!confirm(msg)) return;
+  const now = Date.now();
+  for (const w of gifts) {
+    await put(w.for.length === 1 ? { ...w, deleted: true, image: '', updatedAt: now } : { ...w, for: w.for.filter(x => x !== p.id), updatedAt: now });
+  }
+  await putPerson({ ...p, deleted: true, updatedAt: now });
+  st.person = '';
+  await refresh(); toast(`${p.name} deleted`);
+});
 $('#q').addEventListener('input', e => { st.q = e.target.value.trim(); render(); });
 $('#group').addEventListener('change', e => { st.group = e.target.value; render(); });
 $('#sort').addEventListener('change', e => { st.sort = e.target.value; render(); });
@@ -164,25 +245,52 @@ function paintImage() {
 function openSheet(w, pre = {}) {
   st.cur = w ? { ...w } : { ...newWish(), id: '', ...pre };
   const editing = !!w;
-  $('#sheet-title').textContent = editing ? 'Edit wish' : 'New wish';
   $('#f-name').value = st.cur.name;
   $('#f-price').value = st.cur.price || '';
   $('#f-link').value = st.cur.link;
   $('#f-group').value = st.cur.group;
   $('#f-notes').value = st.cur.notes;
+  $('#f-newp').value = '';
   $('#f-err').hidden = true;
-  $('#f-save').textContent = editing ? 'Save changes' : 'Pin to my wall';
-  $('#f-grant').hidden = !editing;
-  $('#f-grant').textContent = st.cur.granted ? 'Move back to wall' : 'Mark as granted';
   $('#f-del').hidden = !editing;
   const open = $('#f-open');
   open.hidden = !(editing && w.link);
   if (!open.hidden) open.href = w.link;
   setStars(st.cur.priority);
   paintImage();
+  paintGift();
   showSheet($('#sheet'));
   if (!editing) $('#f-name').focus();
 }
+
+// The "Gift for" chips decide whether this is my wish or a gift, and the button labels follow.
+function paintGift() {
+  const c = st.cur, gift = c.for.length > 0, editing = !!c.id;
+  $('#chips').replaceChildren(...st.people.map(p => h('button', {
+    type: 'button', class: 'chip' + (c.for.includes(p.id) ? ' on' : ''), 'aria-pressed': c.for.includes(p.id),
+    onclick: () => { c.for = c.for.includes(p.id) ? c.for.filter(x => x !== p.id) : [...c.for, p.id]; paintGift(); },
+  }, p.name)));
+  if (!st.people.length) $('#chips').append(h('span', { class: 'small' }, 'No people yet. Add one below.'));
+  $('#sheet-title').textContent = (editing ? 'Edit ' : 'New ') + (gift ? 'gift' : 'wish');
+  $('#f-save').textContent = editing ? 'Save changes' : gift ? 'Save gift' : 'Pin to my wall';
+  $('#f-grant').hidden = !editing;
+  $('#f-grant').textContent = c.granted ? (gift ? 'Move back to gifts to buy' : 'Move back to wall') : (gift ? 'Mark as bought' : 'Mark as granted');
+  $('#f-give').hidden = !(editing && gift && c.granted);
+  $('#f-give').textContent = c.given ? 'Not given yet' : 'Mark as given';
+}
+
+async function addPersonInline() {
+  const r = await addPerson($('#f-newp').value);
+  const p = $('#f-err');
+  p.hidden = !r.error; p.textContent = r.error || '';
+  if (r.error) return;
+  st.people = (await getPeople()).filter(x => !x.deleted).sort((a, b) => a.name.localeCompare(b.name));
+  st.cur.for = [...st.cur.for, r.person.id];
+  $('#f-newp').value = '';
+  paintGift();
+}
+$('#f-addp').addEventListener('click', addPersonInline);
+$('#f-newp').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addPersonInline(); } });
 
 function normLink(v) {
   v = v.trim();
@@ -222,17 +330,26 @@ $('#form').addEventListener('submit', async e => {
   if (!Number.isFinite(price) || price < 0) return err('Enter the price as a number, like 1250 or 1250.50.');
   if (link === null) return err('That link doesn’t look right. Paste the full address, like https://shop.com/item.');
   const base = st.cur.id ? st.cur : newWish();
+  const forIds = st.cur.for;
   await put({ ...base, name, price, link, group: $('#f-group').value.trim(), notes: $('#f-notes').value.trim(),
-    priority: st.cur.priority, image: st.cur.image, updatedAt: Date.now() });
+    priority: st.cur.priority, image: st.cur.image, for: forIds, given: forIds.length ? !!st.cur.given : false,
+    updatedAt: Date.now() });
   closeSheets(); await refresh();
-  toast(st.cur.id ? 'Saved' : 'Pinned to your wall');
+  toast(st.cur.id ? 'Saved' : forIds.length ? 'Gift added' : 'Pinned to your wall');
 });
 
 $('#f-grant').addEventListener('click', async () => {
-  const w = st.cur;
-  await put({ ...w, granted: !w.granted, grantedAt: w.granted ? 0 : Date.now(), updatedAt: Date.now() });
+  const w = st.cur, gift = w.for.length > 0;
+  await put({ ...w, granted: !w.granted, grantedAt: w.granted ? 0 : Date.now(), given: w.granted ? false : w.given, updatedAt: Date.now() });
   closeSheets(); await refresh();
-  toast(w.granted ? 'Moved back to your wall' : 'Granted. Enjoy it!');
+  toast(w.granted ? (gift ? 'Moved back to gifts to buy' : 'Moved back to your wall') : gift ? 'Marked as bought' : 'Granted. Enjoy it!');
+});
+
+$('#f-give').addEventListener('click', async () => {
+  const w = st.cur;
+  await put({ ...w, given: !w.given, updatedAt: Date.now() });
+  closeSheets(); await refresh();
+  toast(w.given ? 'Marked as not given yet' : 'Marked as given');
 });
 
 $('#f-del').addEventListener('click', async () => {
@@ -243,26 +360,27 @@ $('#f-del').addEventListener('click', async () => {
 
 /* ---------- quick add and paste ---------- */
 const isUrl = t => /^https?:\/\/\S+$/i.test(t);
+const forPerson = () => (st.person ? { for: [st.person] } : {}); // adding from a person's page makes it a gift for them
 $('#quick').addEventListener('submit', e => {
   e.preventDefault();
   const t = $('#qin').value.trim();
   $('#qin').value = '';
-  if (!t) return openSheet(null);
-  openSheet(null, isUrl(t) ? { link: t } : { name: t.slice(0, 200) });
+  if (!t) return openSheet(null, forPerson());
+  openSheet(null, { ...forPerson(), ...(isUrl(t) ? { link: t } : { name: t.slice(0, 200) }) });
 });
 
 document.addEventListener('paste', async e => {
   const imgFile = [...(e.clipboardData?.files || [])].find(f => f.type.startsWith('image/'));
   if (imgFile) {
     e.preventDefault();
-    if ($('#sheet').hidden) openSheet(null);
+    if ($('#sheet').hidden) openSheet(null, forPerson());
     return setImage(imgFile);
   }
   const t = (e.clipboardData?.getData('text') || '').trim();
   const inField = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
   if (isUrl(t) && $('#sheet').hidden && (e.target.id === 'qin' || !inField)) {
     e.preventDefault(); $('#qin').value = '';
-    openSheet(null, { link: t });
+    openSheet(null, { ...forPerson(), link: t });
   }
 });
 
@@ -289,14 +407,17 @@ const FAIL = 'Couldn’t connect. Check that both devices are on the same Wi-Fi 
 async function onSyncState(s) {
   if (s === 'open') {
     status('Connected. Syncing…');
-    await sess.send({ t: 'all', items: await getAll() });
+    await sess.send({ t: 'all', items: await getAll(), people: await getPeople() });
     sent = true; finishSync();
   } else if (s === 'failed') status(FAIL, true);
   else if (s === 'closed' && !(sent && got)) status('The connection closed before syncing finished.', true);
 }
 
 async function onSyncData(m) {
-  if (m && m.t === 'all' && Array.isArray(m.items)) { got = await mergeAll(m.items); finishSync(); }
+  if (m && m.t === 'all' && Array.isArray(m.items)) {
+    await mergePeople(m.people); // people first so gifts never point at someone who isn't there yet
+    got = await mergeAll(m.items); finishSync();
+  }
 }
 
 async function finishSync() {
@@ -338,7 +459,7 @@ for (const [btn, id] of [['#h-share', '#hcode'], ['#j-share', '#jreply']]) {
 
 /* ---------- backup file ---------- */
 $('#b-export').addEventListener('click', async () => {
-  const data = JSON.stringify({ app: 'wishbone', version: 1, items: await getAll() });
+  const data = JSON.stringify({ app: 'wishbone', version: 2, items: await getAll(), people: await getPeople() });
   const a = h('a', { href: URL.createObjectURL(new Blob([data], { type: 'application/json' })),
     download: `wishbone-backup-${new Date().toISOString().slice(0, 10)}.json` });
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
@@ -351,6 +472,7 @@ $('#b-file').addEventListener('change', async e => {
   try {
     const j = JSON.parse(await f.text());
     if (j.app !== 'wishbone' || !Array.isArray(j.items)) throw new Error('not a backup');
+    await mergePeople(j.people);
     const r = await mergeAll(j.items.map(clean).filter(Boolean));
     await refresh(); toast(`Imported. ${r.added} new, ${r.updated} updated.`);
   } catch { status('That file isn’t a Wishbone backup.', true); }

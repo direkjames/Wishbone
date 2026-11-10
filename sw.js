@@ -1,5 +1,5 @@
 // shortcut: stale-while-revalidate for everything, so an update shows on the second open; bump V only to force-clear old files.
-const V = 'wishbone-v1';
+const V = 'wishbone-v2';
 const SHELL = ['./', 'index.html', 'css/style.css', 'js/app.js', 'js/db.js', 'js/sync.js',
   'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
 

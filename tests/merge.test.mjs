@@ -1,6 +1,6 @@
 // Run with: node tests/merge.test.mjs
 import assert from 'node:assert/strict';
-import { clean, wins } from '../js/db.js';
+import { clean, cleanPerson, personId, wins } from '../js/db.js';
 
 const base = { id: 'a', name: 'Chair', price: 100, updatedAt: 10 };
 
@@ -27,5 +27,22 @@ assert.equal(bad.image, '');
 assert.equal(bad.priority, 2);
 assert.equal(bad.granted, false);
 assert.equal(clean({ id: 'c', link: 'https://shop.com/a', image: 'data:image/jpeg;base64,AAAA' }).link, 'https://shop.com/a');
+
+// gifts: the "for" list is rebuilt, deduplicated and capped; old wishes without it become "for me"
+assert.deepEqual(clean({ id: 'g' }).for, []);
+assert.deepEqual(clean({ id: 'g', for: ['p-mom', 'p-mom', 5, '', 'p-dad'] }).for, ['p-mom', 'p-dad']);
+assert.equal(clean({ id: 'g', for: Array.from({ length: 50 }, (_, i) => 'p' + i) }).for.length, 20);
+assert.equal(clean({ id: 'g', for: 'p-mom' }).for.length, 0);
+assert.equal(clean({ id: 'g', given: true }).given, true);
+assert.equal(clean({ id: 'g', given: 'yes' }).given, false);
+
+// people: same name gives the same id on every device
+assert.equal(personId('Mom'), 'p-mom');
+assert.equal(personId('  Tita  Mai! '), 'p-tita-mai');
+assert.equal(personId('???'), 'p-person');
+assert.equal(cleanPerson({ id: 'p-mom', name: '  Mom ', deleted: 1 }).name, 'Mom');
+assert.equal(cleanPerson({ id: 'p-mom', name: 'Mom', deleted: 1 }).deleted, false);
+assert.equal(cleanPerson({ name: 'no id' }), null);
+assert.equal(cleanPerson({ id: 'p-x', name: 'x'.repeat(100) }).name.length, 40);
 
 console.log('merge tests passed');

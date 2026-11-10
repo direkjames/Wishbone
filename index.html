@@ -24,13 +24,14 @@
   <nav>
     <button class="nv" data-view="wall"><i class="ti ti-layout-grid"></i>Wall</button>
     <button class="nv" data-view="list"><i class="ti ti-list"></i>List</button>
-    <button class="nv" data-view="granted"><i class="ti ti-gift"></i>Granted</button>
+    <button class="nv" data-view="people"><i class="ti ti-users"></i>People</button>
+    <button class="nv" data-view="granted"><i class="ti ti-circle-check"></i>Granted</button>
   </nav>
   <div class="lbl">Groups</div>
   <div id="groups"></div>
   <div class="grow"></div>
   <div class="stub">
-    <div class="stub-main"><div class="small">Still wishing for</div><div class="big fr" data-total>₱0</div><div class="small" data-sub></div></div>
+    <div class="stub-main"><div class="small">Still wishing for</div><div class="big fr" data-total>₱0</div><div class="small" data-sub></div><div class="small gifts" data-gifts></div></div>
   </div>
   <button class="nv" data-open-sync><i class="ti ti-arrows-exchange"></i><span data-last>Sync and backup</span></button>
   <button class="nv" data-theme-toggle><i class="ti ti-moon"></i><span>Dark mode</span></button>
@@ -46,16 +47,32 @@
   </header>
 
   <section class="stub top-stub">
-    <div class="stub-main"><div class="small">Still wishing for</div><div class="big fr" data-total>₱0</div></div>
+    <div class="stub-main"><div class="small">Still wishing for</div><div class="big fr" data-total>₱0</div><div class="small gifts" data-gifts></div></div>
     <div class="stub-cut"><div class="num fr" data-count>0</div><div class="small">wishes</div></div>
   </section>
   <div class="small granted-line" data-granted-line></div>
 
   <div class="seg" role="tablist">
-    <button data-view="wall">Wall</button><button data-view="list">List</button><button data-view="granted">Granted</button>
+    <button data-view="wall">Wall</button><button data-view="list">List</button><button data-view="people">People</button><button data-view="granted">Granted</button>
   </div>
 
-  <div class="tools">
+  <div id="phead" class="phead" hidden>
+    <button class="rb" id="pback" aria-label="Back to people"><i class="ti ti-arrow-left"></i></button>
+    <div class="phead-t"><div class="fr" id="pname-h"></div><div class="small" id="pmeta"></div></div>
+    <button class="rb" id="pedit" aria-label="Rename person"><i class="ti ti-pencil"></i></button>
+    <button class="rb" id="pdel" aria-label="Delete person"><i class="ti ti-trash"></i></button>
+  </div>
+
+  <div id="people" class="people" hidden>
+    <form id="padd" class="padd">
+      <input id="pname" placeholder="Add a person, like Mom" maxlength="40" autocomplete="off" aria-label="Person's name">
+      <button type="submit" class="btn dark">Add person</button>
+    </form>
+    <p id="perr" class="err" role="alert" hidden></p>
+    <div id="pgrid" class="pgrid"></div>
+  </div>
+
+  <div class="tools" id="tools">
     <label class="pill grow"><i class="ti ti-search"></i><input id="q" type="search" placeholder="Search wishes" aria-label="Search wishes"></label>
     <select id="group" class="pill" aria-label="Group"></select>
     <select id="sort" class="pill" aria-label="Sort">
@@ -66,8 +83,8 @@
 
   <div id="wall" class="wall"></div>
   <div id="empty" class="empty" hidden>
-    <div class="fr">Nothing here yet</div>
-    <p>Paste a link or a photo below, or press the plus button, to pin your first wish.</p>
+    <div class="fr" id="empty-t">Nothing here yet</div>
+    <p id="empty-p">Paste a link or a photo below, or press the plus button, to pin your first wish.</p>
   </div>
 
   <form id="quick" class="quick">
@@ -91,7 +108,11 @@
     <label class="f">Name<input id="f-name" maxlength="200" autocomplete="off"></label>
     <label class="f">Price<div class="money"><b>₱</b><input id="f-price" inputmode="decimal" placeholder="0" autocomplete="off"></div></label>
     <label class="f">Link<input id="f-link" inputmode="url" placeholder="https://" autocomplete="off"></label>
-    <label class="f">Group<input id="f-group" list="glist" maxlength="40" placeholder="Tech, Home, Gifts…" autocomplete="off"></label>
+    <div class="f">Gift for <small>(leave empty if it's for you)</small>
+      <div id="chips" class="chips"></div>
+      <div class="addp"><input id="f-newp" maxlength="40" placeholder="Add a person" autocomplete="off" aria-label="Add a person"><button type="button" class="btn" id="f-addp">Add</button></div>
+    </div>
+    <label class="f">Group<input id="f-group" list="glist" maxlength="40" placeholder="Tech, Home, Clothes…" autocomplete="off"></label>
     <datalist id="glist"></datalist>
     <div class="f">How badly do you want it?<div class="stars" id="stars"><button type="button" data-p="1" aria-label="1 star">★</button><button type="button" data-p="2" aria-label="2 stars">★</button><button type="button" data-p="3" aria-label="3 stars">★</button></div></div>
     <label class="f">Notes<textarea id="f-notes" rows="2" maxlength="2000"></textarea></label>
@@ -100,6 +121,7 @@
       <button type="submit" class="btn dark" id="f-save">Pin to my wall</button>
       <a id="f-open" class="btn" target="_blank" rel="noopener noreferrer" hidden><i class="ti ti-external-link"></i>Open link</a>
       <button type="button" class="btn" id="f-grant" hidden>Mark as granted</button>
+      <button type="button" class="btn" id="f-give" hidden>Mark as given</button>
       <button type="button" class="btn danger" id="f-del" hidden>Delete</button>
     </div>
   </form>

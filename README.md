@@ -20,6 +20,8 @@ Pin anything you want to your wall: a photo, a price, a link, and a note. Wishbo
 - A wall of tilted photo cards, plus a plain list view and a Granted shelf for things you already got.
 - Prices in pesos with a running total of what you're still wishing for, and a separate total for what you've granted.
 - Add a wish by typing, pasting a link, or pasting or attaching a photo. Links are saved and clickable.
+- Gifts for other people: add a person, then pin gift ideas under their name. One gift can be for more than one person.
+- Gifts follow their own steps: to buy, bought, then given. Gift totals are kept apart from your own wishlist total.
 - Groups, a 3-star priority, notes, search, and sorting by priority, newest, or price.
 - Sync your phone and computer on the same Wi-Fi. Your list goes straight from one device to the other, with no account and no server in between.
 - Backup file: export your wishes and import them again, or merge them into another device.
@@ -31,11 +33,12 @@ Pin anything you want to your wall: a photo, a price, a link, and a note. Wishbo
 1. Open Wishbone in your browser at the address where you host it.
 2. Tap or click **Install** (in the address bar on a computer, or "Add to Home screen" on a phone) to use it like an app.
 3. Paste a link or photo into the bar at the bottom, or press the plus button, to pin your first wish.
-4. To sync two devices, open **Sync and backup** on both:
+4. For gifts, open **People**, add a name, and open their page. Anything you add there is a gift for them.
+5. To sync two devices, open **Sync and backup** on both:
    1. On the first device, choose **Start pairing** and copy the code.
    2. On the second device, choose **Join from the other device**, paste the code, and copy the reply code it gives you.
    3. Paste the reply code on the first device and press **Connect and sync**.
-5. If sync can't connect (for example on guest Wi-Fi), use **Export** on one device and **Import** on the other.
+6. If sync can't connect (for example on guest Wi-Fi), use **Export** on one device and **Import** on the other.
 
 ## Requirements
 

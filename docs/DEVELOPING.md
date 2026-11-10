@@ -39,6 +39,8 @@ Push the repo, then Settings, Pages, deploy from the `main` branch root. Everyth
 
 There is no server. Two devices open a WebRTC data channel and find each other by swapping two copy-and-paste codes (an offer and an answer). No STUN or TURN servers are configured on purpose, so it only works on the same local network. Once connected, each side sends all its wishes, and each wish is kept by the newest `updatedAt`. Deleted wishes stay as small tombstones so deletes sync too. Everything received is rebuilt field by field in `clean()` before it is stored.
 
+People are their own records. A person's id comes from their name (`p-mom`), so adding the same name on two devices gives one person after sync. A wish's `for` list holds person ids; an empty list means it's for me, and only those wishes count toward "Still wishing for". People are merged before wishes.
+
 ## Known limits
 
 - Every sync needs the two-code pairing again; devices don't stay paired.
