@@ -6,15 +6,17 @@
 <title>Wishbone</title>
 <meta name="description" content="Your private wishlist, in pesos.">
 <meta name="theme-color" content="#E2A93B">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data:; connect-src 'self' https://0.peerjs.com wss://0.peerjs.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Figtree:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" integrity="sha384-hs5SINUk7GPohxRis+rS7grpSWEbtOIJ3sRoseBKg3CDPIKpG55RfSenbvA6ALOt" crossorigin="anonymous">
 <link rel="stylesheet" href="css/style.css">
-<script>try{document.documentElement.dataset.theme=localStorage.getItem('wb-theme')||'light'}catch(e){}</script>
+<script src="js/theme.js"></script>
 </head>
 <body>
 <div id="app">
@@ -38,6 +40,7 @@
 </aside>
 
 <main>
+  <h1 class="sr-only">Wishbone</h1>
   <header class="top">
     <div class="logo fr">wishbone</div>
     <div class="top-btns">
@@ -52,7 +55,7 @@
   </section>
   <div class="small granted-line" data-granted-line></div>
 
-  <div class="seg" role="tablist">
+  <div class="seg" role="group" aria-label="View">
     <button data-view="wall">Wall</button><button data-view="list">List</button><button data-view="people">People</button><button data-view="granted">Granted</button>
   </div>
 

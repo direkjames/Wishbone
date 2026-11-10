@@ -56,7 +56,7 @@ export function clean(r) {
     notes: str(r.notes, 2000),
     group: str(r.group, 40),
     priority: [1, 2, 3].includes(r.priority) ? r.priority : 2,
-    image: image.startsWith('data:image/') ? image : '',
+    image: /^data:image\/(jpeg|png|webp);base64,/.test(image) ? image : '',
     granted: r.granted === true,
     grantedAt: Number(r.grantedAt) || 0,
     for: [...new Set(forIds)].slice(0, 20),

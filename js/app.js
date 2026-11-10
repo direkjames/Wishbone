@@ -26,7 +26,7 @@ const hash = s => [...s].reduce((a, c) => a + c.charCodeAt(0), 0);
 const st = { items: [], people: [], view: 'wall', person: '', group: '', q: '', sort: 'priority', cur: null };
 const own = w => w.for.length === 0; // a wish with nobody in "Gift for" is for me
 const personOf = id => st.people.find(p => p.id === id);
-const sum = a => a.reduce((s, w) => s + w.price, 0);
+const sum = a => Math.round(a.reduce((s, w) => s + w.price, 0) * 100) / 100; // round to cents so 0.1 + 0.2 never shows as 0.30000000000000004
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 /* ---------- toast ---------- */
@@ -37,6 +37,18 @@ function toast(msg) {
   clearTimeout(toastT);
   toastT = setTimeout(() => { t.hidden = true; }, 2600);
 }
+
+// One save at a time: a double tap must not create two wishes, and a failed write must say so.
+let busy = false;
+const guard = fn => async (...a) => {
+  a[0]?.preventDefault?.(); // always stop the browser's own form submit, even when we ignore this tap
+  if (busy) return;
+  busy = true;
+  try { await fn(...a); }
+  catch { toast('Couldn’t save that. Your device may be out of storage.'); }
+  finally { busy = false; }
+};
+addEventListener('unhandledrejection', () => toast('Something went wrong. Please try again.'));
 
 /* ---------- theme ---------- */
 function applyTheme(t) {
@@ -51,8 +63,11 @@ $$('[data-theme-toggle]').forEach(b => b.addEventListener('click', () => {
 
 /* ---------- data and rendering ---------- */
 async function refresh() {
-  st.items = (await getAll()).filter(w => !w.deleted).map(w => ({ for: [], given: false, ...w }));
   st.people = (await getPeople()).filter(p => !p.deleted).sort((a, b) => a.name.localeCompare(b.name));
+  const live = new Set(st.people.map(p => p.id));
+  // A gift whose people were all deleted (for example on the other device) comes back as my own wish instead of vanishing.
+  st.items = (await getAll()).filter(w => !w.deleted).map(w => ({ for: [], given: false, ...w }))
+    .map(w => ({ ...w, for: w.for.filter(id => live.has(id)) }));
   if (st.person && !personOf(st.person)) st.person = '';
   render();
 }
@@ -83,7 +98,7 @@ function render() {
   $$('[data-last]').forEach(e => { e.textContent = lastText(); });
   $$('[data-view]').forEach(b => {
     const on = b.dataset.view === st.view;
-    b.setAttribute('aria-selected', on);
+    b.setAttribute('aria-pressed', on);
     if (b.classList.contains('nv')) b.setAttribute('aria-current', on);
   });
 
@@ -179,7 +194,7 @@ function card(w, i) {
 $$('[data-view]').forEach(b => b.addEventListener('click', () => { st.view = b.dataset.view; st.person = ''; render(); }));
 $('#pback').addEventListener('click', () => { st.person = ''; render(); });
 
-$('#padd').addEventListener('submit', async e => {
+$('#padd').addEventListener('submit', guard(async e => {
   e.preventDefault();
   const r = await addPerson($('#pname').value);
   const err = $('#perr');
@@ -188,7 +203,7 @@ $('#padd').addEventListener('submit', async e => {
   $('#pname').value = '';
   await refresh();
   toast(`${r.person.name} added`);
-});
+}));
 
 $('#pedit').addEventListener('click', async () => {
   const p = personOf(st.person);
@@ -199,7 +214,7 @@ $('#pedit').addEventListener('click', async () => {
   await refresh();
 });
 
-$('#pdel').addEventListener('click', async () => {
+$('#pdel').addEventListener('click', guard(async () => {
   const p = personOf(st.person);
   const gifts = st.items.filter(w => w.for.includes(p.id)), only = gifts.filter(w => w.for.length === 1);
   const msg = `Delete ${p.name}?` + (only.length ? ` Their ${plural(only.length, 'gift', 'gifts')} will be deleted too.` : '') + ' This can’t be undone.';
@@ -211,7 +226,7 @@ $('#pdel').addEventListener('click', async () => {
   await putPerson({ ...p, deleted: true, updatedAt: now });
   st.person = '';
   await refresh(); toast(`${p.name} deleted`);
-});
+}));
 $('#q').addEventListener('input', e => { st.q = e.target.value.trim(); render(); });
 $('#group').addEventListener('change', e => { st.group = e.target.value; render(); });
 $('#sort').addEventListener('change', e => { st.sort = e.target.value; render(); });
@@ -219,12 +234,20 @@ $('#sort').addEventListener('change', e => { st.sort = e.target.value; render();
 /* ---------- sheets ---------- */
 let openEl = null;
 function showSheet(el) {
+  const back = document.activeElement; // so focus can return to what opened the sheet
   closeSheets();
+  lastFocus = back;
   openEl = el; el.hidden = false; $('#scrim').hidden = false;
+  const title = el.querySelector('h2');
+  title.tabIndex = -1; title.focus({ preventScroll: true }); // keyboard and screen reader users land inside the sheet
 }
+let lastFocus = null;
 function closeSheets() {
+  const wasOpen = !!openEl;
   for (const el of [$('#sheet'), $('#sync')]) el.hidden = true;
   $('#scrim').hidden = true; openEl = null;
+  if (wasOpen && lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true });
+  lastFocus = null;
 }
 $('#scrim').addEventListener('click', closeSheets);
 $('#sheet-x').addEventListener('click', closeSheets);
@@ -319,7 +342,7 @@ $('#imgbox').addEventListener('click', () => $('#file').click());
 $('#file').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) setImage(f); });
 $('#imgrm').addEventListener('click', () => { st.cur.image = ''; paintImage(); });
 
-$('#form').addEventListener('submit', async e => {
+$('#form').addEventListener('submit', guard(async e => {
   e.preventDefault();
   const err = m => { const p = $('#f-err'); p.textContent = m; p.hidden = false; };
   const name = $('#f-name').value.trim();
@@ -327,7 +350,7 @@ $('#form').addEventListener('submit', async e => {
   const price = priceRaw === '' ? 0 : Number(priceRaw);
   const link = normLink($('#f-link').value);
   if (!name) return err('Enter a name for your wish.');
-  if (!Number.isFinite(price) || price < 0) return err('Enter the price as a number, like 1250 or 1250.50.');
+  if (!Number.isFinite(price) || price < 0 || price > 1e9) return err('Enter the price as a number up to 1,000,000,000, like 1250 or 1250.50.');
   if (link === null) return err('That link doesn’t look right. Paste the full address, like https://shop.com/item.');
   const base = st.cur.id ? st.cur : newWish();
   const forIds = st.cur.for;
@@ -336,27 +359,27 @@ $('#form').addEventListener('submit', async e => {
     updatedAt: Date.now() });
   closeSheets(); await refresh();
   toast(st.cur.id ? 'Saved' : forIds.length ? 'Gift added' : 'Pinned to your wall');
-});
+}));
 
-$('#f-grant').addEventListener('click', async () => {
+$('#f-grant').addEventListener('click', guard(async () => {
   const w = st.cur, gift = w.for.length > 0;
   await put({ ...w, granted: !w.granted, grantedAt: w.granted ? 0 : Date.now(), given: w.granted ? false : w.given, updatedAt: Date.now() });
   closeSheets(); await refresh();
   toast(w.granted ? (gift ? 'Moved back to gifts to buy' : 'Moved back to your wall') : gift ? 'Marked as bought' : 'Granted. Enjoy it!');
-});
+}));
 
-$('#f-give').addEventListener('click', async () => {
+$('#f-give').addEventListener('click', guard(async () => {
   const w = st.cur;
   await put({ ...w, given: !w.given, updatedAt: Date.now() });
   closeSheets(); await refresh();
   toast(w.given ? 'Marked as not given yet' : 'Marked as given');
-});
+}));
 
-$('#f-del').addEventListener('click', async () => {
+$('#f-del').addEventListener('click', guard(async () => {
   if (!confirm('Delete this wish? This can’t be undone.')) return;
   await put({ ...st.cur, deleted: true, image: '', updatedAt: Date.now() });
   closeSheets(); await refresh(); toast('Deleted');
-});
+}));
 
 /* ---------- quick add and paste ---------- */
 const isUrl = t => /^https?:\/\/\S+$/i.test(t);
@@ -511,15 +534,21 @@ $('#b-file').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = '';
   if (!f) return;
   try {
+    if (f.size > 25 * 1024 * 1024) throw new Error('too big'); // a real backup is a few MB at most
     const j = JSON.parse(await f.text());
     if (j.app !== 'wishbone' || !Array.isArray(j.items)) throw new Error('not a backup');
     await mergePeople(j.people);
     const r = await mergeAll(j.items.map(clean).filter(Boolean));
     await refresh(); toast(`Imported. ${r.added} new, ${r.updated} updated.`);
-  } catch { status('That file isn’t a Wishbone backup.', true); }
+  } catch { status('That file isn’t a Wishbone backup, or it is too big (the limit is 25 MB).', true); }
 });
 
 /* ---------- start ---------- */
 applyTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
-refresh();
+refresh().catch(() => {
+  // storage is blocked (a private window can do this): say so instead of showing a blank page
+  $('#empty').hidden = false;
+  $('#empty-t').textContent = 'Can’t open your wishes';
+  $('#empty-p').textContent = 'This browser is blocking storage. Open Wishbone in a normal window, not a private one.';
+});
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

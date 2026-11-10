@@ -28,6 +28,7 @@ Push the repo, then Settings, Pages, deploy from the `main` branch root. Everyth
 | Path | What it is |
 | --- | --- |
 | `index.html`, `css/style.css` | The page and all styling (light and dark themes via CSS variables) |
+| `js/theme.js` | Applies the saved theme before first paint (a file, not inline, so the CSP can forbid inline scripts) |
 | `js/app.js` | The interface: wall, list, add and edit sheet, paste handling, sync screens, backup |
 | `js/db.js` | IndexedDB storage and the merge and validation rules |
 | `js/sync.js` | Direct device-to-device sync (WebRTC data channel, no server) |
@@ -47,6 +48,13 @@ Introducing the devices works two ways (`js/sync.js`):
 Once connected, each side sends all its wishes, and each wish is kept by the newest `updatedAt`. Deleted wishes stay as small tombstones so deletes sync too. Everything received is rebuilt field by field in `clean()` before it is stored.
 
 People are their own records. A person's id comes from their name (`p-mom`), so adding the same name on two devices gives one person after sync. A wish's `for` list holds person ids; an empty list means it's for me, and only those wishes count toward "Still wishing for". People are merged before wishes.
+
+## Security notes
+
+- `index.html` carries a Content-Security-Policy meta tag listing exactly the hosts the app uses (jsDelivr, Google Fonts, and the PeerJS broker). If you add a new outside host, add it there or the browser will block it. `form-action 'none'` is deliberate: every form is handled in JavaScript.
+- Third-party files are pinned to an exact version and checked with a Subresource Integrity hash. When bumping one, recompute the hash (`sha384`, base64).
+- Everything that comes from outside (synced data, backup files) goes through `clean()` and size caps before it is stored.
+- User text is only ever added with `textContent` (the `h()` helper), never `innerHTML`.
 
 ## Known limits
 

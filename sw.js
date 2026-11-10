@@ -1,6 +1,6 @@
 // shortcut: stale-while-revalidate for everything, so an update shows on the second open; bump V only to force-clear old files.
-const V = 'wishbone-v3';
-const SHELL = ['./', 'index.html', 'css/style.css', 'js/app.js', 'js/db.js', 'js/sync.js',
+const V = 'wishbone-v4';
+const SHELL = ['./', 'index.html', 'css/style.css', 'js/app.js', 'js/db.js', 'js/sync.js', 'js/theme.js',
   'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {

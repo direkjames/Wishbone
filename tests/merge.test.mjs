@@ -28,6 +28,10 @@ assert.equal(bad.priority, 2);
 assert.equal(bad.granted, false);
 assert.equal(clean({ id: 'c', link: 'https://shop.com/a', image: 'data:image/jpeg;base64,AAAA' }).link, 'https://shop.com/a');
 
+// only real photo types are kept (an SVG data URL is dropped)
+assert.equal(clean({ id: 'i', image: 'data:image/svg+xml;base64,PHN2Zz4=' }).image, '');
+assert.equal(clean({ id: 'i', image: 'data:image/webp;base64,AAAA' }).image, 'data:image/webp;base64,AAAA');
+
 // gifts: the "for" list is rebuilt, deduplicated and capped; old wishes without it become "for me"
 assert.deepEqual(clean({ id: 'g' }).for, []);
 assert.deepEqual(clean({ id: 'g', for: ['p-mom', 'p-mom', 5, '', 'p-dad'] }).for, ['p-mom', 'p-dad']);

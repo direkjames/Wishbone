@@ -21,6 +21,10 @@ function reassembler(onData) {
   return raw => {
     try {
       const p = JSON.parse(raw);
+      // the other device is untrusted until proven otherwise: cap piece count, piece size and open messages
+      if (typeof p.id !== 'string' || typeof p.d !== 'string' || p.d.length > CHUNK * 2) return;
+      if (!Number.isInteger(p.n) || p.n < 1 || p.n > 5000 || !Number.isInteger(p.i) || p.i < 0 || p.i >= p.n) return;
+      if (!parts.has(p.id) && parts.size >= 4) parts.delete(parts.keys().next().value);
       const a = parts.get(p.id) || [];
       a[p.i] = p.d;
       parts.set(p.id, a);
